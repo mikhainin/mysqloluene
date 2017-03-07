@@ -64,7 +64,9 @@ SET(MYSQLOLUENE_SOURCES
 	src/ha_mysqloluene.cc 
 	src/tnt_connection.cc
 	src/tnt_row.cc
+	src/tnt/iterator.cc
 )
+
 
 # IF(WITH_MYSQLOLUENE_STORAGE_ENGINE AND NOT WITHOUT_MYSQLOLUENE_STORAGE_ENGINE)
 #   MYSQL_ADD_PLUGIN(mysqloluene ${MYSQLOLUENE_SOURCES} STORAGE_ENGINE DEFAULT)

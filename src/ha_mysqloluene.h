@@ -5,8 +5,13 @@
 #include "handler.h"                     /* handler */
 #include "my_base.h"                     /* ha_rows */
 
+#include <memory>
+
 #include "tnt_connection.h"
 
+namespace tnt {
+class Iterator;
+}
 /** @brief
   Example_share is a class that will be shared among all open handlers.
   This example implements the minimum of what you will probably need.
@@ -31,7 +36,7 @@ class ha_mysqloluene: public handler
   Mysqloluene_share *get_share(); ///< Get the share
   int current_position = 0;
   TntConnection c;
-
+  std::shared_ptr<tnt::Iterator> iterator;
 public:
   ha_mysqloluene(handlerton *hton, TABLE_SHARE *table_arg);
   ~ha_mysqloluene()

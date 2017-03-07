@@ -11,6 +11,7 @@
 #include <msgpuck.h>
 
 #include "tnt_row.h"
+#include "tnt/iterator.h"
 
 TntConnection::TntConnection():
 	tnt(nullptr),
@@ -67,7 +68,7 @@ bool TntConnection::connected()
 	return tnt != nullptr;
 }
 
-std::shared_ptr<TntRow> TntConnection::select(const std::string &space)
+std::shared_ptr<tnt::Iterator> TntConnection::select(const std::string &space)
 {
 /*
 int tnt_get_spaceno(struct tnt_stream *s, const char *space,
@@ -85,21 +86,21 @@ s		    size_t space_len)
 	tnt_flush(tnt);
 	tnt_stream_free(key);
 
-	struct tnt_reply reply;
-	tnt_reply_init(&reply);
-	tnt->read_reply(tnt, &reply);
+	// struct tnt_reply reply;
+	// tnt_reply_init(&reply);
+	// tnt->read_reply(tnt, &reply);
 
-	const char *data = reply.data;
-	std::size_t data_len = reply.data_end - reply.data;
+	// const char *data = reply.data;
+	// std::size_t data_len = reply.data_end - reply.data;
 	// uint32_t vsz = mp_decode_array(&data);
     // uint32_t arrsz = vsz;
     // uint32_t str_len = 0;
 
-    auto result = std::shared_ptr<TntRow>(new TntRow(data, data_len));
-    tnt_reply_free(&reply);
+    auto result = tnt::Iterator::makeFromStream(tnt);
+    // tnt_reply_free(&reply);
     tnt_stream_reqid(tnt, 0);
 
-	tnt_reply_free(&reply);
+	// tnt_reply_free(&reply);
 
 	return result;
 }

@@ -6,41 +6,91 @@
 
 #include <msgpuck.h>
 
-TntRow::TntRow(const char *_data, size_t sz):
-	data(nullptr),
-	size(sz),
-	p(nullptr)
+TntRow::TntRow()
 {
-	data = new char[size];
-	memcpy(data, _data, size);
-	p = &data[0];
-
-	assert(mp_typeof(*p) == MP_ARRAY);
-	assert(mp_decode_array(&p) == 1);
-	assert(mp_decode_array(&p) == 2);
 }
 
 TntRow::~TntRow()
 {
-	delete [] data;
-	data = nullptr;
-	size = 0;
 }
 
-int TntRow::getInt()
+std::shared_ptr<TntRow> TntRow::eatData(const char *(&p))
 {
-	assert(mp_typeof(*p) == MP_UINT);
-	return mp_decode_uint(&p);
+	std::shared_ptr<TntRow> row = std::make_shared<TntRow>();
+
+	p = row->eatDataInternal(p);
+	return row;
 }
 
-std::string TntRow::getString()
+const char * TntRow::eatDataInternal(const char *p)
 {
-	// assert(mp_typeof(*p) == MP_STR);
-	// u_int i = mp_decode_uint(&p); // WTF?
-	assert(mp_typeof(*p) == MP_STR);
+	assert(mp_typeof(*p) == MP_ARRAY);
+	uint32_t elementsNumber = mp_decode_array(&p);
+	assert(elementsNumber != -1);
 
-	uint32_t str_len = 0;
-	const char * str = mp_decode_str(&p, &str_len);
+	fields.reserve(elementsNumber);
 
-	return std::string(str, str_len);
+	for(uint32_t i = 0; i < elementsNumber; ++i) {
+		enum mp_type type = mp_typeof(*p);
+		field_content_t f;
+		f.type = type;
+		switch(type) {
+		case MP_UINT:
+			f.u = mp_decode_uint(&p);
+			break;
+		case MP_INT:
+			f.i = mp_decode_int(&p);
+			break;
+		case MP_BIN: // passthrough
+		case MP_STR:
+			f.str.data = mp_decode_str(&p, &f.str.len);
+			break;
+		case MP_BOOL:
+			f.b = mp_decode_bool(&p);
+			break;
+		case MP_FLOAT:
+			f.f = mp_decode_float(&p);
+			break;
+		case MP_DOUBLE:
+			f.d = mp_decode_double(&p);
+			break;
+		case MP_NIL:
+			throw std::runtime_error("Nil is not supported");
+		case MP_ARRAY:
+			throw std::runtime_error("Array is not supported");
+		case MP_EXT:
+			throw std::runtime_error("Have no idea what it is but MP_EXT is not supported either");
+		default:
+			throw std::runtime_error("Unknown unsupported MSGPACK type");
+		}
+		fields.emplace_back(f);
+	}
+	return p;
+}
+
+int64_t TntRow::getInt(int i) const
+{
+	assert(fields.size() > i);
+	assert(fields[i].type == MP_UINT || fields[i].type == MP_INT);
+	if (fields[i].type == MP_UINT) {
+		return fields[i].u;
+	} else if (fields[i].type == MP_INT) {
+		return fields[i].i;
+	} else {
+		assert(false && "we should not have reached here!");
+		return -1;
+	}
+}
+
+std::string TntRow::getString(int i) const
+{
+	assert(fields.size() > i);
+	assert(fields[i].type == MP_STR || fields[i].type == MP_BIN);
+
+	return std::string(fields[i].str.data, fields[i].str.len);
+}
+
+int TntRow::getFieldNum() const
+{
+	return fields.size();
 }

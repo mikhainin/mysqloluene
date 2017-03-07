@@ -5,6 +5,7 @@
 #include "probes_mysql.h"
 #include "sql_plugin.h"
 #include "tnt_row.h"
+#include "tnt/iterator.h"
 
 static handler *example_create_handler(handlerton *hton,
                                        TABLE_SHARE *table,
@@ -439,6 +440,7 @@ int ha_mysqloluene::rnd_init(bool scan)
 	  DBUG_RETURN(HA_ERR_END_OF_FILE);
   } else {
 	  DBUG_PRINT("ha_mysqloluene::rnd_init", ("Successfully created tarantool connection"));
+	  iterator = c.select("space");
 	  DBUG_RETURN(0);
   }
 }
@@ -478,26 +480,46 @@ int ha_mysqloluene::rnd_next(uchar *buf)
   //org_bitmap=
   my_bitmap_map *org_bitmap = dbug_tmp_use_all_columns(table, table->write_set);
 
-  auto r = c.select("space"); // TODO:use space from table's connection_string;
+  // auto r = c.select("space"); // TODO:use space from table's connection_string;
 
-  if (current_position++ >= 1) {
+  memset((void*)buf, 0, (unsigned long int)table->s->null_bytes);
+
+  auto r = iterator->nextRow();
+  if (!r) { //current_position++ >= 1) {
 	  rc = HA_ERR_END_OF_FILE;
   } else {
 	  int i = 0;
 	  for (Field **field=table->field ; *field ; field++) {
 		  // buffer.length(0);
-		  if (i == 0) {
-			  // (*field)->store(2, false);
-			  (*field)->store(r->getInt(), false);
+		  if (i < r->getFieldNum()) {
+			  switch ((*field)->type()) {
+				  case MYSQL_TYPE_LONG:
+				      (*field)->set_notnull();
+					  (*field)->store(r->getInt(i), false);
+					  break;
+				  case MYSQL_TYPE_STRING:
+				  case MYSQL_TYPE_VAR_STRING:
+				  case MYSQL_TYPE_VARCHAR: {
+				  // case MYSQL_TYPE_CHAR:
+					  auto string = r->getString(i);
+				      (*field)->set_notnull();
+					  (*field)->store(string.c_str(), string.size(), system_charset_info);
+					  break;
+				  }
+			  }
 		  } else {
-			  auto string = r->getString();
-			  (*field)->store(string.c_str(), string.size(), system_charset_info);
-			  // (*field)->store("12", 2, system_charset_info);
+		      (*field)->set_null();
+		      (*field)->reset();
 		  }
+		  /*if (i == 0) {
+			  (*field)->store(r->getInt(i), false);
+		  } else {
+			  auto string = r->getString(i);
+			  (*field)->store(string.c_str(), string.size(), system_charset_info);
+		  }*/
 		  ++i;
 	  }
   }
-  memset((void*)buf, 0, (unsigned long int)table->s->null_bytes);
   MYSQL_READ_ROW_DONE(rc);
 
   dbug_tmp_restore_column_map(table->write_set, org_bitmap);
