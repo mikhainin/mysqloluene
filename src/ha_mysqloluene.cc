@@ -4,10 +4,11 @@
 #include "ha_mysqloluene.h"
 #include "probes_mysql.h"
 #include "sql_plugin.h"
+#include "log.h"
 #include "tnt_row.h"
 #include "tnt/iterator.h"
 
-static handler *example_create_handler(handlerton *hton,
+static handler *create_handler(handlerton *hton,
                                        TABLE_SHARE *table,
                                        MEM_ROOT *mem_root);
 
@@ -31,7 +32,7 @@ static int example_init_func(void *p)
 
   example_hton= (handlerton *)p;
   example_hton->state=                     SHOW_OPTION_YES;
-  example_hton->create=                    example_create_handler;
+  example_hton->create=                    create_handler;
   example_hton->flags=                     HTON_CAN_RECREATE;
   example_hton->system_database=   example_system_database;
   example_hton->is_supported_system_table= example_is_supported_system_table;
@@ -69,7 +70,7 @@ err:
 }
 
 
-static handler* example_create_handler(handlerton *hton,
+static handler* create_handler(handlerton *hton,
                                        TABLE_SHARE *table,
                                        MEM_ROOT *mem_root)
 {
@@ -80,7 +81,12 @@ ha_mysqloluene::ha_mysqloluene(handlerton *hton, TABLE_SHARE *table_arg)
   :handler(hton, table_arg),
    share(0)
 {
-	const st_mysql_lex_string &connection = table_arg->connect_string;
+	if (table_arg) { // on create table is NULL
+		const st_mysql_lex_string &connection = table_arg->connect_string;
+		if (!parseConnectionString(std::string(connection.str, connection.length))) {
+		 sql_print_warning("Wrong schema'");
+		}
+	}
 
 }
 
@@ -434,13 +440,17 @@ int ha_mysqloluene::index_last(uchar *buf)
 int ha_mysqloluene::rnd_init(bool scan)
 {
   DBUG_ENTER("ha_mysqloluene::rnd_init");
-  c.connect("localhost:3301"); // TODO: use connection uri from table's connection_string;
+  c.connect(connection_info.host_port_uri);
   if (!c.connected()) {
 	  DBUG_PRINT("ha_mysqloluene::rnd_init", ("Not connected, no tarantool connection"));
-	  DBUG_RETURN(HA_ERR_END_OF_FILE);
+	  DBUG_RETURN(HA_ERR_NO_CONNECTION);
   } else {
 	  DBUG_PRINT("ha_mysqloluene::rnd_init", ("Successfully created tarantool connection"));
-	  iterator = c.select("space");
+	  iterator = c.select(connection_info.space_name);
+	  if (!iterator) {
+		  // TODO: set warning
+		  DBUG_RETURN(HA_ERR_NO_PARTITION_FOUND);
+	  }
 	  DBUG_RETURN(0);
   }
 }
@@ -492,6 +502,7 @@ int ha_mysqloluene::rnd_next(uchar *buf)
 	  for (Field **field=table->field ; *field ; field++) {
 		  // buffer.length(0);
 		  if (i < r->getFieldNum()) {
+			  /*
 			  switch ((*field)->type()) {
 				  case MYSQL_TYPE_LONG:
 				      (*field)->set_notnull();
@@ -507,16 +518,28 @@ int ha_mysqloluene::rnd_next(uchar *buf)
 					  break;
 				  }
 			  }
+			  */
+			  if (r->isInt(i)) {
+			      (*field)->set_notnull();
+				  (*field)->store(r->getInt(i), false);
+			  } else if (r->isString(i)) {
+				  auto string = r->getString(i);
+				  (*field)->set_notnull();
+				  (*field)->store(string.c_str(), string.size(), system_charset_info);
+			  } else if (r->isNull(i)) {
+			      (*field)->set_null();
+			      (*field)->reset();
+			  } else if (r->isBool(i)) {
+				  (*field)->set_notnull();
+				  (*field)->store(r->getBool(i), false);
+			  } else if (r->isFloatingPoint(i)) {
+				  (*field)->set_notnull();
+				  (*field)->store(r->getDouble(i));
+			  }
 		  } else {
 		      (*field)->set_null();
 		      (*field)->reset();
 		  }
-		  /*if (i == 0) {
-			  (*field)->store(r->getInt(i), false);
-		  } else {
-			  auto string = r->getString(i);
-			  (*field)->store(string.c_str(), string.size(), system_charset_info);
-		  }*/
 		  ++i;
 	  }
   }
@@ -859,6 +882,56 @@ int ha_mysqloluene::create(const char *name, TABLE *table_arg,
     works.
   */
   DBUG_RETURN(0);
+}
+
+// TODO: rewrite using Boost.Spirit
+bool ha_mysqloluene::parseConnectionString(const std::string &connection_string)
+{
+ // tnt://localhost:3301/isp
+ // tnt://localhost:3301/:513
+ if (strncmp(connection_string.data(), "tnt://", 6) != 0) {
+	 sql_print_warning("Wrong schema'");
+	 return false;
+ }
+
+ size_t colon_point = connection_string.find(':', 6);
+ if (colon_point == std::string::npos) {
+	 sql_print_warning("Can't find colon_point'");
+	 return false;
+ }
+
+ const std::string &hostname = connection_string.substr(6, colon_point - 6);
+ connection_info.hostname = hostname;
+ sql_print_warning("hostname: %s", hostname.c_str());
+
+ colon_point++;
+ size_t slash_point = connection_string.find('/', colon_point);
+ if (slash_point == std::string::npos) {
+	 sql_print_warning("Can't find slash_point'");
+	 return false;
+ }
+ const std::string &port_string = connection_string.substr(colon_point, slash_point - colon_point);
+ connection_info.port = atoi(port_string.c_str());
+ sql_print_warning("port: %d (%s)", connection_info.port, port_string.c_str());
+
+ connection_info.host_port_uri = connection_string.substr(6, slash_point - 6);
+ sql_print_warning("host:port: '%s'", connection_info.host_port_uri.c_str());
+
+ const std::string &space = connection_string.substr(slash_point + 1);
+ if (space.empty()) {
+	 sql_print_warning("Space is empty'");
+	 return false;
+ }
+ sql_print_warning("space: %s", space.c_str());
+
+ if (space[0] == ':') {
+	 connection_info.space_id = atoi(space.c_str());
+	 sql_print_warning("space id: %d", connection_info.space_id);
+ } else {
+	 connection_info.space_name = space;
+	 sql_print_warning("space name: %s", connection_info.space_name.c_str());
+ }
+ return true;
 }
 
 struct st_mysql_storage_engine mysqloulene_storage_engine=

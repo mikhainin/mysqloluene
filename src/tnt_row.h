@@ -33,7 +33,15 @@ public:
 
 	int64_t getInt(int i) const;
 	std::string getString(int i) const;
+	bool getBool(int i) const;
+	double getDouble(int i) const;
 	int getFieldNum() const;
+
+	bool isInt(int i) const;
+	bool isNull(int i) const;
+	bool isString(int i) const;
+	bool isBool(int i) const;
+	bool isFloatingPoint(int i) const;
 private:
 	// std::size_t size;
 	std::vector<field_content_t> fields;

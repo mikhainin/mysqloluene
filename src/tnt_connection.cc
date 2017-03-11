@@ -70,37 +70,22 @@ bool TntConnection::connected()
 
 std::shared_ptr<tnt::Iterator> TntConnection::select(const std::string &space)
 {
-/*
-int tnt_get_spaceno(struct tnt_stream *s, const char *space,
-s		    size_t space_len)
-{
-	struct tnt_schema *sch = (TNT_SNET_CAST(s))->schema;
-	return tnt_schema_stosid(sch, space, space_len);
-}
- */
+	tnt_reload_schema(tnt); // TODO: error checl
+	int32_t sno = tnt_get_spaceno(tnt, space.c_str(), space.size());
+	if (sno == -1) {
+		// TODO: set last error
+		return std::shared_ptr<tnt::Iterator>();
+	}
 
 	struct tnt_stream *key = NULL;
 	key = tnt_object(NULL);
 	tnt_object_add_array(key, 0);
-	tnt_select(tnt, 513, 0, UINT32_MAX, 0, 0, key); // box.space[513]:select({})
-	tnt_flush(tnt);
+	tnt_select(tnt, sno, 0, UINT32_MAX, 0, 0, key); // box.space[sno]:select({}) // TODO: error check
+	tnt_flush(tnt); // TODO: error check
 	tnt_stream_free(key);
 
-	// struct tnt_reply reply;
-	// tnt_reply_init(&reply);
-	// tnt->read_reply(tnt, &reply);
-
-	// const char *data = reply.data;
-	// std::size_t data_len = reply.data_end - reply.data;
-	// uint32_t vsz = mp_decode_array(&data);
-    // uint32_t arrsz = vsz;
-    // uint32_t str_len = 0;
-
     auto result = tnt::Iterator::makeFromStream(tnt);
-    // tnt_reply_free(&reply);
     tnt_stream_reqid(tnt, 0);
-
-	// tnt_reply_free(&reply);
 
 	return result;
 }

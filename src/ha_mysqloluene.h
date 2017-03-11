@@ -31,12 +31,20 @@ public:
 */
 class ha_mysqloluene: public handler
 {
+  struct connection_info_t {
+	  std::string hostname;
+	  std::string host_port_uri;
+	  int port;
+	  int space_id;
+	  std::string space_name;
+  };
   THR_LOCK_DATA lock;      ///< MySQL lock
   Mysqloluene_share *share;    ///< Shared lock info
   Mysqloluene_share *get_share(); ///< Get the share
   int current_position = 0;
   TntConnection c;
   std::shared_ptr<tnt::Iterator> iterator;
+  connection_info_t connection_info;
 public:
   ha_mysqloluene(handlerton *hton, TABLE_SHARE *table_arg);
   ~ha_mysqloluene()
@@ -233,4 +241,6 @@ public:
 
   THR_LOCK_DATA **store_lock(THD *thd, THR_LOCK_DATA **to,
                              enum thr_lock_type lock_type);     ///< required
+private:
+  bool parseConnectionString(const std::string &connection_string);
 };

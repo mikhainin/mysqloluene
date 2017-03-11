@@ -55,7 +55,8 @@ const char * TntRow::eatDataInternal(const char *p)
 			f.d = mp_decode_double(&p);
 			break;
 		case MP_NIL:
-			throw std::runtime_error("Nil is not supported");
+			mp_decode_nil(&p);
+			break;
 		case MP_ARRAY:
 			throw std::runtime_error("Array is not supported");
 		case MP_EXT:
@@ -63,7 +64,7 @@ const char * TntRow::eatDataInternal(const char *p)
 		default:
 			throw std::runtime_error("Unknown unsupported MSGPACK type");
 		}
-		fields.emplace_back(f);
+		fields.push_back(f);
 	}
 	return p;
 }
@@ -90,7 +91,53 @@ std::string TntRow::getString(int i) const
 	return std::string(fields[i].str.data, fields[i].str.len);
 }
 
+bool TntRow::getBool(int i) const
+{
+	assert(fields.size() > i);
+	assert(fields[i].type == MP_BOOL);
+	return fields[i].b;
+}
+
+double TntRow::getDouble(int i) const
+{
+	assert(fields.size() > i);
+	if (fields[i].type == MP_FLOAT) {
+		return fields[i].f;
+	} else if (fields[i].type == MP_DOUBLE) {
+		return fields[i].d;
+	} else {
+		assert(false && "we should not have reached here!");
+		return -1;
+	}
+}
+
+
 int TntRow::getFieldNum() const
 {
 	return fields.size();
+}
+
+bool TntRow::isInt(int i) const
+{
+	return fields[i].type == MP_INT || fields[i].type == MP_UINT;
+}
+
+bool TntRow::isNull(int i) const
+{
+	return fields[i].type == MP_NIL;
+}
+
+bool TntRow::isString(int i) const
+{
+	return fields[i].type == MP_STR || fields[i].type == MP_BIN;
+}
+
+bool TntRow::isBool(int i) const
+{
+	return fields[i].type == MP_BOOL;
+}
+
+bool TntRow::isFloatingPoint(int i) const
+{
+	return fields[i].type == MP_FLOAT || fields[i].type == MP_DOUBLE;
 }
