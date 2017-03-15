@@ -4,8 +4,13 @@
 #include <string>
 #include <vector>
 
-class TntRow
+namespace tnt {
+class Row
 {
+
+	Row(const Row &) = delete;
+	Row& operator = (const Row &) = delete;
+public:
 	struct field_content_t {
 		char type;
 		union {
@@ -21,15 +26,12 @@ class TntRow
 		};
 	};
 
-	TntRow(const TntRow &) = delete;
-	TntRow& operator = (const TntRow &) = delete;
-public:
 	// TntRow(const char *data, size_t sz);
 	// TntRow(const char *data, size_t sz);
-	TntRow();
-	~TntRow();
+	Row();
+	~Row();
 
-	static std::shared_ptr<TntRow> eatData(const char *(&p));
+	static std::shared_ptr<Row> eatData(const char *(&p));
 
 	int64_t getInt(int i) const;
 	std::string getString(int i) const;
@@ -49,3 +51,4 @@ private:
 //	/ const char *p;
 	const char * eatDataInternal(const char *p);
 };
+}

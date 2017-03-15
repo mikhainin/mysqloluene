@@ -12,7 +12,7 @@
 #include <cassert>
 #include <stdexcept>
 
-#include "../tnt_row.h"
+#include "row.h"
 
 
 namespace tnt {
@@ -52,16 +52,16 @@ void Iterator::deleteReply(struct tnt_reply *reply)
 	}
 }
 
-std::shared_ptr<TntRow> Iterator::nextRow()
+std::shared_ptr<Row> Iterator::nextRow()
 {
 	if (!reply->data) {
 		// error
-		return std::shared_ptr<TntRow>();
+		return std::shared_ptr<Row>();
 	} else if (tuples_data == reply->data_end) {
 		// data is over
-		return std::shared_ptr<TntRow>();
+		return std::shared_ptr<Row>();
 	} else {
-		auto row = TntRow::eatData(tuples_data); // (new TntRow(reply->data, reply->data - reply->data_end));
+		auto row = Row::eatData(tuples_data); // (new TntRow(reply->data, reply->data - reply->data_end));
 		return row;
 	}
 }

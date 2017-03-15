@@ -1,0 +1,6 @@
+- connect via unix socket
+- inserts support
+- updates support
+- deletes support
+- indexed selects
+

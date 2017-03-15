@@ -1,28 +1,28 @@
-#include "tnt_row.h"
-
 #include <cstdint>
 #include <string>
 #include <iostream>
 
 #include <msgpuck.h>
+#include "row.h"
 
-TntRow::TntRow()
+namespace tnt {
+Row::Row()
 {
 }
 
-TntRow::~TntRow()
+Row::~Row()
 {
 }
 
-std::shared_ptr<TntRow> TntRow::eatData(const char *(&p))
+std::shared_ptr<Row> Row::eatData(const char *(&p))
 {
-	std::shared_ptr<TntRow> row = std::make_shared<TntRow>();
+	std::shared_ptr<Row> row = std::make_shared<Row>();
 
 	p = row->eatDataInternal(p);
 	return row;
 }
 
-const char * TntRow::eatDataInternal(const char *p)
+const char * Row::eatDataInternal(const char *p)
 {
 	assert(mp_typeof(*p) == MP_ARRAY);
 	uint32_t elementsNumber = mp_decode_array(&p);
@@ -69,7 +69,7 @@ const char * TntRow::eatDataInternal(const char *p)
 	return p;
 }
 
-int64_t TntRow::getInt(int i) const
+int64_t Row::getInt(int i) const
 {
 	assert(fields.size() > i);
 	assert(fields[i].type == MP_UINT || fields[i].type == MP_INT);
@@ -83,7 +83,7 @@ int64_t TntRow::getInt(int i) const
 	}
 }
 
-std::string TntRow::getString(int i) const
+std::string Row::getString(int i) const
 {
 	assert(fields.size() > i);
 	assert(fields[i].type == MP_STR || fields[i].type == MP_BIN);
@@ -91,14 +91,14 @@ std::string TntRow::getString(int i) const
 	return std::string(fields[i].str.data, fields[i].str.len);
 }
 
-bool TntRow::getBool(int i) const
+bool Row::getBool(int i) const
 {
 	assert(fields.size() > i);
 	assert(fields[i].type == MP_BOOL);
 	return fields[i].b;
 }
 
-double TntRow::getDouble(int i) const
+double Row::getDouble(int i) const
 {
 	assert(fields.size() > i);
 	if (fields[i].type == MP_FLOAT) {
@@ -112,32 +112,33 @@ double TntRow::getDouble(int i) const
 }
 
 
-int TntRow::getFieldNum() const
+int Row::getFieldNum() const
 {
 	return fields.size();
 }
 
-bool TntRow::isInt(int i) const
+bool Row::isInt(int i) const
 {
 	return fields[i].type == MP_INT || fields[i].type == MP_UINT;
 }
 
-bool TntRow::isNull(int i) const
+bool Row::isNull(int i) const
 {
 	return fields[i].type == MP_NIL;
 }
 
-bool TntRow::isString(int i) const
+bool Row::isString(int i) const
 {
 	return fields[i].type == MP_STR || fields[i].type == MP_BIN;
 }
 
-bool TntRow::isBool(int i) const
+bool Row::isBool(int i) const
 {
 	return fields[i].type == MP_BOOL;
 }
 
-bool TntRow::isFloatingPoint(int i) const
+bool Row::isFloatingPoint(int i) const
 {
 	return fields[i].type == MP_FLOAT || fields[i].type == MP_DOUBLE;
+}
 }

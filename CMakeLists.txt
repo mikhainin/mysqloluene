@@ -63,8 +63,9 @@ SET(MYSQLOLUENE_PLUGIN_DYNAMIC "ha_mysqloluene")
 SET(MYSQLOLUENE_SOURCES 
 	src/ha_mysqloluene.cc 
 	src/tnt_connection.cc
-	src/tnt_row.cc
+	src/tnt/row.cc
 	src/tnt/iterator.cc
+	src/tnt/tuple_builder.cc
 )
 
 

@@ -4,9 +4,10 @@
 #include <memory>
 
 struct tnt_stream;
-class TntRow;
+class Row;
 namespace tnt {
 	class Iterator;
+	class TupleBuilder;
 }
 
 class TntConnection {
@@ -18,7 +19,9 @@ public:
 	bool connected();
 
 	std::shared_ptr<tnt::Iterator> select(const std::string &space);
+	bool insert(const std::string &space, const tnt::TupleBuilder &builder);
 
+	int resolveSpace(const std::string &space);
 private:
 	struct tnt_stream * tnt;
 	std::string host;

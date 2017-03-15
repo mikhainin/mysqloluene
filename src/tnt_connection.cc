@@ -7,11 +7,13 @@
 #include <tarantool/tnt_net.h>
 #include <tarantool/tnt_opt.h>
 #include <tarantool/tnt_request.h>
+#include <tarantool/tnt_object.h>
 
 #include <msgpuck.h>
 
-#include "tnt_row.h"
 #include "tnt/iterator.h"
+#include "tnt/tuple_builder.h"
+#include "tnt/row.h"
 
 TntConnection::TntConnection():
 	tnt(nullptr),
@@ -70,8 +72,7 @@ bool TntConnection::connected()
 
 std::shared_ptr<tnt::Iterator> TntConnection::select(const std::string &space)
 {
-	tnt_reload_schema(tnt); // TODO: error checl
-	int32_t sno = tnt_get_spaceno(tnt, space.c_str(), space.size());
+	int32_t sno = resolveSpace(space);
 	if (sno == -1) {
 		// TODO: set last error
 		return std::shared_ptr<tnt::Iterator>();
@@ -88,4 +89,34 @@ std::shared_ptr<tnt::Iterator> TntConnection::select(const std::string &space)
     tnt_stream_reqid(tnt, 0);
 
 	return result;
+}
+
+bool TntConnection::insert(const std::string &space, const tnt::TupleBuilder &builder)
+{
+	int32_t sno = resolveSpace(space);
+	if (sno == -1) {
+		// TODO: set last error
+		return false;
+	}
+
+	struct tnt_stream *val = tnt_object_as(NULL, const_cast<char*>(builder.ptr()), builder.size());
+	auto result = tnt_insert(tnt, sno, val);
+	tnt_flush(tnt); // TODO: error check
+	tnt_stream_free(val);
+
+	struct tnt_reply reply;
+	tnt_reply_init(&reply);
+	if (tnt->read_reply(tnt, &reply) == -1) {
+		throw new std::runtime_error("Failed to read reply"); // TODO: add moar info into error message
+	}
+	tnt_reply_free(&reply);
+
+	return true;
+}
+
+int TntConnection::resolveSpace(const std::string &space)
+{
+	tnt_reload_schema(tnt); // TODO: error check if connected, if not loaded yet
+	int32_t sno = tnt_get_spaceno(tnt, space.c_str(), space.size());
+	return sno;
 }
