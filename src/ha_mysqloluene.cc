@@ -575,6 +575,7 @@ int ha_mysqloluene::rnd_init(bool scan)
 		  // TODO: set warning
 		  DBUG_RETURN(HA_ERR_NO_PARTITION_FOUND);
 	  }
+	  current_row = 0;
 	  DBUG_RETURN(0);
   }
 }
@@ -582,7 +583,7 @@ int ha_mysqloluene::rnd_init(bool scan)
 int ha_mysqloluene::rnd_end()
 {
   DBUG_ENTER("ha_mysqloluene::rnd_end");
-  current_position = 0;
+  current_row = 0;
   DBUG_RETURN(0);
 }
 
@@ -619,7 +620,7 @@ int ha_mysqloluene::rnd_next(uchar *buf)
   memset((void*)buf, 0, (unsigned long int)table->s->null_bytes);
 
   auto r = iterator->nextRow();
-  if (!r) { //current_position++ >= 1) {
+  if (!r) {
 	  rc = HA_ERR_END_OF_FILE;
   } else {
 	  int i = 0;
@@ -667,6 +668,7 @@ int ha_mysqloluene::rnd_next(uchar *buf)
 		  ++i;
 	  }
   }
+  ++current_row;
   MYSQL_READ_ROW_DONE(rc);
 
   dbug_tmp_restore_column_map(table->write_set, org_bitmap);
@@ -721,7 +723,7 @@ int ha_mysqloluene::rnd_pos(uchar *buf, uchar *pos)
   DBUG_ENTER("ha_mysqloluene::rnd_pos");
   MYSQL_READ_ROW_START(table_share->db.str, table_share->table_name.str,
                        TRUE);
-  // rc= HA_ERR_WRONG_COMMAND;
+  rc = current_row;
   MYSQL_READ_ROW_DONE(rc);
   DBUG_RETURN(rc);
 }

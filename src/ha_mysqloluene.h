@@ -41,7 +41,7 @@ class ha_mysqloluene: public handler
   THR_LOCK_DATA lock;      ///< MySQL lock
   Mysqloluene_share *share;    ///< Shared lock info
   Mysqloluene_share *get_share(); ///< Get the share
-  int current_position = 0;
+  int current_row = 0;
   TntConnection c;
   std::shared_ptr<tnt::Iterator> iterator;
   connection_info_t connection_info;
