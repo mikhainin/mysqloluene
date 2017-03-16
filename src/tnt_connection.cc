@@ -114,6 +114,54 @@ bool TntConnection::insert(const std::string &space, const tnt::TupleBuilder &bu
 	return true;
 }
 
+bool TntConnection::del(const std::string &space, const tnt::TupleBuilder &builder)
+{
+	int32_t sno = resolveSpace(space);
+	if (sno == -1) {
+		// TODO: set last error
+		return false;
+	}
+
+	struct tnt_stream *val = tnt_object_as(NULL, const_cast<char*>(builder.ptr()), builder.size());
+	auto result = tnt_delete(tnt, sno, 0, val);
+	tnt_flush(tnt); // TODO: error check
+	tnt_stream_free(val);
+
+	struct tnt_reply reply;
+	tnt_reply_init(&reply);
+	if (tnt->read_reply(tnt, &reply) == -1) {
+		throw new std::runtime_error("Failed to read reply"); // TODO: add moar info into error message
+	}
+	tnt_reply_free(&reply);
+
+	return true;
+}
+
+bool TntConnection::update(const std::string &space, const tnt::TupleBuilder &builder)
+{
+	/*
+	int32_t sno = resolveSpace(space);
+	if (sno == -1) {
+		// TODO: set last error
+		return false;
+	}
+
+	struct tnt_stream *val = tnt_object_as(NULL, const_cast<char*>(builder.ptr()), builder.size());
+	auto result = tnt_update(tnt, sno, val);
+	tnt_flush(tnt); // TODO: error check
+	tnt_stream_free(val);
+
+	struct tnt_reply reply;
+	tnt_reply_init(&reply);
+	if (tnt->read_reply(tnt, &reply) == -1) {
+		throw new std::runtime_error("Failed to read reply"); // TODO: add moar info into error message
+	}
+	tnt_reply_free(&reply);
+
+	return true;*/
+	return false; // TODO: implement me
+}
+
 int TntConnection::resolveSpace(const std::string &space)
 {
 	tnt_reload_schema(tnt); // TODO: error check if connected, if not loaded yet

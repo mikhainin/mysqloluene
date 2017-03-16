@@ -262,16 +262,10 @@ int ha_mysqloluene::close(void)
 int ha_mysqloluene::write_row(uchar *buf)
 {
   DBUG_ENTER("ha_mysqloluene::write_row");
-  /*
-    Example of a successful write_row. We don't store the data
-    anywhere; they are thrown away. A real implementation will
-    probably need to do something with 'buf'. We report a success
-    here, to pretend that the insert was successful.
-  */
 
   c.connect(connection_info.host_port_uri);
   if (!c.connected()) {
-	  DBUG_PRINT("ha_mysqloluene::rnd_init", ("Not connected, no tarantool connection"));
+	  DBUG_PRINT("ha_mysqloluene::write_row", ("Not connected, no tarantool connection"));
 	  DBUG_RETURN(HA_ERR_NO_CONNECTION);
   }
 
@@ -369,7 +363,51 @@ int ha_mysqloluene::update_row(const uchar *old_data, uchar *new_data)
 int ha_mysqloluene::delete_row(const uchar *buf)
 {
   DBUG_ENTER("ha_mysqloluene::delete_row");
-  DBUG_RETURN(HA_ERR_WRONG_COMMAND);
+
+  c.connect(connection_info.host_port_uri);
+  if (!c.connected()) {
+	  DBUG_PRINT("ha_mysqloluene::delete_row", ("Not connected, no tarantool connection"));
+	  DBUG_RETURN(HA_ERR_NO_CONNECTION);
+  }
+
+  my_bitmap_map *org_bitmap = dbug_tmp_use_all_columns(table, table->read_set);
+
+  tnt::TupleBuilder builder(1); // can remove only by one-field primary key
+  for (Field **field=table->field ; *field ; field++) {
+
+	  	  if ((*field)->is_null()) {
+			  builder.pushNull();
+	  	  }
+		  switch ((*field)->type()) {
+			  case MYSQL_TYPE_LONG:
+				  builder.push((*field)->val_int());
+				  goto built; // delete by primary key only (by the first field)
+				  // TODO: determine primary key from  Tarantool or table description
+				  break;
+			  case MYSQL_TYPE_STRING:
+			  case MYSQL_TYPE_VAR_STRING:
+			  case MYSQL_TYPE_VARCHAR: {
+				  String str;
+				  (*field)->val_str(&str);
+				  builder.push(str.c_ptr(), str.length());
+				  goto built; // delete by primary key only (by the first field)
+				  // TODO: determine primary key from  Tarantool or table description
+				  break;
+			  }
+		  }
+  }
+built:
+  if (builder.size() == 0) {
+	  // TODO: error - no rows to delete
+  }
+
+  dbug_tmp_restore_column_map(table->read_set, org_bitmap);
+
+  if (!c.del(connection_info.space_name, builder)) {
+	  DBUG_RETURN(HA_ERR_NO_PARTITION_FOUND);
+  }
+
+  DBUG_RETURN(0);
 }
 
 /**
