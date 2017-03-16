@@ -137,9 +137,8 @@ bool TntConnection::del(const std::string &space, const tnt::TupleBuilder &build
 	return true;
 }
 
-bool TntConnection::update(const std::string &space, const tnt::TupleBuilder &builder)
+bool TntConnection::replace(const std::string &space, const tnt::TupleBuilder &builder)
 {
-	/*
 	int32_t sno = resolveSpace(space);
 	if (sno == -1) {
 		// TODO: set last error
@@ -147,7 +146,7 @@ bool TntConnection::update(const std::string &space, const tnt::TupleBuilder &bu
 	}
 
 	struct tnt_stream *val = tnt_object_as(NULL, const_cast<char*>(builder.ptr()), builder.size());
-	auto result = tnt_update(tnt, sno, val);
+	auto result = tnt_replace(tnt, sno, val);
 	tnt_flush(tnt); // TODO: error check
 	tnt_stream_free(val);
 
@@ -158,8 +157,7 @@ bool TntConnection::update(const std::string &space, const tnt::TupleBuilder &bu
 	}
 	tnt_reply_free(&reply);
 
-	return true;*/
-	return false; // TODO: implement me
+	return true;
 }
 
 int TntConnection::resolveSpace(const std::string &space)

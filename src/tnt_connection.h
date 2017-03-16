@@ -21,7 +21,7 @@ public:
 	std::shared_ptr<tnt::Iterator> select(const std::string &space);
 	bool insert(const std::string &space, const tnt::TupleBuilder &builder);
 	bool del(const std::string &space, const tnt::TupleBuilder &builder);
-	bool update(const std::string &space, const tnt::TupleBuilder &builder);
+	bool replace(const std::string &space, const tnt::TupleBuilder &builder);
 
 	int resolveSpace(const std::string &space);
 private:

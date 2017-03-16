@@ -1,6 +1,11 @@
+v0.01
 - connect via unix socket
-- inserts support
 - updates support
-- deletes support
-- indexed selects
+- indexed selects (by primary)
+
+v0.02
+- untie from local paths
+
+v0.03
+- test
 

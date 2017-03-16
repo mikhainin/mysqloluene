@@ -336,7 +336,50 @@ int ha_mysqloluene::update_row(const uchar *old_data, uchar *new_data)
 {
 
   DBUG_ENTER("ha_mysqloluene::update_row");
-  DBUG_RETURN(HA_ERR_WRONG_COMMAND);
+
+  c.connect(connection_info.host_port_uri);
+  if (!c.connected()) {
+	  DBUG_PRINT("ha_mysqloluene::write_row", ("Not connected, no tarantool connection"));
+	  DBUG_RETURN(HA_ERR_NO_CONNECTION);
+  }
+
+  my_bitmap_map *org_bitmap = dbug_tmp_use_all_columns(table, table->read_set);
+
+  tnt::TupleBuilder builder(table->visible_field_count());
+  for (Field **field=table->field ; *field ; field++) {
+
+	  	  if ((*field)->is_null()) {
+			  builder.pushNull();
+	  	  }
+		  switch ((*field)->type()) {
+			  case MYSQL_TYPE_LONG:
+				  builder.push((*field)->val_int());
+				  sql_print_warning("write_row: value int( %lld )", (*field)->val_int());
+				  break;
+			  case MYSQL_TYPE_STRING:
+			  case MYSQL_TYPE_VAR_STRING:
+			  case MYSQL_TYPE_VARCHAR: {
+			  // case MYSQL_TYPE_CHAR:
+				  // auto string = r->getString(i);
+			      // (*field)->set_notnull();
+				  String str;
+				  (*field)->val_str(&str);
+				  builder.push(str.c_ptr(), str.length());
+				  // sql_print_warning("write_row: value str(%s)", str.c_ptr());
+				  // (*field)->store(string.c_str(), string.size(), system_charset_info);
+				  break;
+			  }
+		  }
+		  //*/
+  }
+
+  dbug_tmp_restore_column_map(table->read_set, org_bitmap);
+
+  if (!c.replace(connection_info.space_name, builder)) {
+	  DBUG_RETURN(HA_ERR_NO_PARTITION_FOUND);
+  }
+
+  DBUG_RETURN(0);
 }
 
 
