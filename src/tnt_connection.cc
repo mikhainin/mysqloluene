@@ -70,7 +70,7 @@ bool TntConnection::connected()
 	return tnt != nullptr;
 }
 
-std::shared_ptr<tnt::Iterator> TntConnection::select(const std::string &space)
+std::shared_ptr<tnt::Iterator> TntConnection::select(const std::string &space, const tnt::TupleBuilder &builder)
 {
 	int32_t sno = resolveSpace(space);
 	if (sno == -1) {
@@ -78,9 +78,11 @@ std::shared_ptr<tnt::Iterator> TntConnection::select(const std::string &space)
 		return std::shared_ptr<tnt::Iterator>();
 	}
 
-	struct tnt_stream *key = NULL;
-	key = tnt_object(NULL);
-	tnt_object_add_array(key, 0);
+	struct tnt_stream *key = tnt_object_as(NULL, const_cast<char*>(builder.ptr()), builder.size());
+
+	// struct tnt_stream *key = NULL;
+	// key = tnt_object(NULL);
+	// tnt_object_add_array(key, 0);
 	tnt_select(tnt, sno, 0, UINT32_MAX, 0, 0, key); // box.space[sno]:select({}) // TODO: error check
 	tnt_flush(tnt); // TODO: error check
 	tnt_stream_free(key);

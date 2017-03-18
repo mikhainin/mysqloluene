@@ -114,7 +114,7 @@ public:
     There is no need to implement ..._key_... methods if your engine doesn't
     support indexes.
    */
-  uint max_supported_keys()          const { return 0; }
+  uint max_supported_keys()          const { return 1; }
 
   /** @brief
     unireg.cc will call this to make sure that the storage engine can handle
@@ -125,7 +125,7 @@ public:
     There is no need to implement ..._key_... methods if your engine doesn't
     support indexes.
    */
-  uint max_supported_key_parts()     const { return 0; }
+  uint max_supported_key_parts()     const { return 1; }
 
   /** @brief
     unireg.cc will call this to make sure that the storage engine can handle
@@ -136,7 +136,7 @@ public:
     There is no need to implement ..._key_... methods if your engine doesn't
     support indexes.
    */
-  uint max_supported_key_length()    const { return 0; }
+  uint max_supported_key_length()    const { return 3500; /* same as innodb. TODO: find out Tarantool's limit */ }
 
   /** @brief
     Called in test_quick_select to determine if indexes should be used.
@@ -189,6 +189,7 @@ public:
   */
   int index_read_map(uchar *buf, const uchar *key,
                      key_part_map keypart_map, enum ha_rkey_function find_flag);
+
 
   /** @brief
     We implement this in ha_example.cc. It's not an obligatory method;

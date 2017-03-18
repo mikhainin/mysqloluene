@@ -18,7 +18,7 @@ public:
 	void connect(const std::string &host_port);
 	bool connected();
 
-	std::shared_ptr<tnt::Iterator> select(const std::string &space);
+	std::shared_ptr<tnt::Iterator> select(const std::string &space, const tnt::TupleBuilder &builder);
 	bool insert(const std::string &space, const tnt::TupleBuilder &builder);
 	bool del(const std::string &space, const tnt::TupleBuilder &builder);
 	bool replace(const std::string &space, const tnt::TupleBuilder &builder);

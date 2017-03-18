@@ -1,6 +1,5 @@
 v0.01
 - connect via unix socket
-- updates support
 - indexed selects (by primary)
 
 v0.02
@@ -9,3 +8,5 @@ v0.02
 v0.03
 - test
 
+---
+remove old record if primary key is being changed during UPDATE

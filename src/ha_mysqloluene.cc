@@ -453,23 +453,36 @@ built:
   DBUG_RETURN(0);
 }
 
+
 /**
   @brief
   Positions an index cursor to the index specified in the handle. Fetches the
   row if available. If the key value is null, begin at the first key of the
   index.
 */
-
 int ha_mysqloluene::index_read_map(uchar *buf, const uchar *key,
-                               key_part_map keypart_map MY_ATTRIBUTE((unused)),
-                               enum ha_rkey_function find_flag
-                               MY_ATTRIBUTE((unused)))
+                               key_part_map keypart_map,
+                               enum ha_rkey_function find_flag MY_ATTRIBUTE((unused)))
 {
-  int rc;
+  int rc = 0;
   DBUG_ENTER("ha_mysqloluene::index_read");
-  MYSQL_INDEX_READ_ROW_START(table_share->db.str, table_share->table_name.str);
-  rc= HA_ERR_WRONG_COMMAND;
-  MYSQL_INDEX_READ_ROW_DONE(rc);
+  // MYSQL_INDEX_READ_ROW_START(table_share->db.str, table_share->table_name.str);
+
+  if (find_flag == HA_READ_KEY_EXACT && keypart_map == 1) { // where id = <value>
+	  // TODO: check for key type
+	  int64_t value = *reinterpret_cast<const int*>(key);
+	  c.connect(connection_info.host_port_uri);
+	  tnt::TupleBuilder builder(1);
+	  builder.push(value);
+	  iterator = c.select(connection_info.space_name, builder);
+	  table->status = 0;
+
+	  rc = index_next(buf);
+  } else {
+	  rc= HA_ERR_WRONG_COMMAND;
+  }
+
+  // MYSQL_INDEX_READ_ROW_DONE(rc);
   DBUG_RETURN(rc);
 }
 
@@ -481,10 +494,49 @@ int ha_mysqloluene::index_read_map(uchar *buf, const uchar *key,
 
 int ha_mysqloluene::index_next(uchar *buf)
 {
-  int rc;
+  int rc = 0;
   DBUG_ENTER("ha_mysqloluene::index_next");
   MYSQL_INDEX_READ_ROW_START(table_share->db.str, table_share->table_name.str);
-  rc= HA_ERR_WRONG_COMMAND;
+  // rc= HA_ERR_WRONG_COMMAND;
+  memset((void*)buf, 0, (unsigned long int)table->s->null_bytes);
+
+  auto r = iterator->nextRow();
+  if (!r) {
+	  rc = HA_ERR_END_OF_FILE;
+  } else {
+	  my_bitmap_map *org_bitmap = dbug_tmp_use_all_columns(table, table->write_set);
+
+	  int i = 0;
+	  for (Field **field=table->field ; *field ; field++) {
+		  if (i < r->getFieldNum()) {
+
+			  if (r->isInt(i)) {
+			      (*field)->set_notnull();
+				  (*field)->store(r->getInt(i), false);
+			  } else if (r->isString(i)) {
+				  auto string = r->getString(i);
+				  (*field)->set_notnull();
+				  (*field)->store(string.c_str(), string.size(), system_charset_info);
+			  } else if (r->isNull(i)) {
+			      (*field)->set_null();
+			      (*field)->reset();
+			  } else if (r->isBool(i)) {
+				  (*field)->set_notnull();
+				  (*field)->store(r->getBool(i), false);
+			  } else if (r->isFloatingPoint(i)) {
+				  (*field)->set_notnull();
+				  (*field)->store(r->getDouble(i));
+			  }
+		  } else {
+		      (*field)->set_null();
+		      (*field)->reset();
+		  }
+		  ++i;
+	  }
+
+	  dbug_tmp_restore_column_map(table->write_set, org_bitmap);
+  }
+
   MYSQL_INDEX_READ_ROW_DONE(rc);
   DBUG_RETURN(rc);
 }
@@ -497,7 +549,7 @@ int ha_mysqloluene::index_next(uchar *buf)
 
 int ha_mysqloluene::index_prev(uchar *buf)
 {
-  int rc;
+  int rc = 0;
   DBUG_ENTER("ha_mysqloluene::index_prev");
   MYSQL_INDEX_READ_ROW_START(table_share->db.str, table_share->table_name.str);
   rc= HA_ERR_WRONG_COMMAND;
@@ -570,7 +622,7 @@ int ha_mysqloluene::rnd_init(bool scan)
 	  DBUG_RETURN(HA_ERR_NO_CONNECTION);
   } else {
 	  DBUG_PRINT("ha_mysqloluene::rnd_init", ("Successfully created tarantool connection"));
-	  iterator = c.select(connection_info.space_name);
+	  iterator = c.select(connection_info.space_name, tnt::TupleBuilder(0));
 	  if (!iterator) {
 		  // TODO: set warning
 		  DBUG_RETURN(HA_ERR_NO_PARTITION_FOUND);
@@ -700,6 +752,7 @@ int ha_mysqloluene::rnd_next(uchar *buf)
 void ha_mysqloluene::position(const uchar *record)
 {
   DBUG_ENTER("ha_mysqloluene::position");
+  my_store_ptr(ref, ref_length, current_row);
   DBUG_VOID_RETURN;
 }
 
@@ -723,6 +776,7 @@ int ha_mysqloluene::rnd_pos(uchar *buf, uchar *pos)
   DBUG_ENTER("ha_mysqloluene::rnd_pos");
   MYSQL_READ_ROW_START(table_share->db.str, table_share->table_name.str,
                        TRUE);
+  current_row = my_get_ptr(pos,ref_length);
   rc = current_row;
   MYSQL_READ_ROW_DONE(rc);
   DBUG_RETURN(rc);
