@@ -295,6 +295,15 @@ int ha_mysqloluene::write_row(uchar *buf)
 				  // (*field)->store(string.c_str(), string.size(), system_charset_info);
 				  break;
 			  }
+			  case MYSQL_TYPE_DATE:
+			  case MYSQL_TYPE_DATETIME:
+			  case MYSQL_TYPE_TIMESTAMP: {
+				  struct timeval tv = {0};
+				  int w = 0;
+				  (*field)->get_timestamp(&tv, &w); // this function always returns zero
+				  builder.push(static_cast<int64_t>(tv.tv_sec));
+			  }
+
 		  }
 		  //*/
   }
@@ -369,6 +378,14 @@ int ha_mysqloluene::update_row(const uchar *old_data, uchar *new_data)
 				  // (*field)->store(string.c_str(), string.size(), system_charset_info);
 				  break;
 			  }
+			  case MYSQL_TYPE_DATE:
+			  case MYSQL_TYPE_DATETIME:
+			  case MYSQL_TYPE_TIMESTAMP: {
+				  struct timeval tv = {0};
+				  int w = 0;
+				  (*field)->get_timestamp(&tv, &w); // this function always returns zero
+				  builder.push(static_cast<int64_t>(tv.tv_sec));
+			  }
 		  }
 		  //*/
   }
@@ -436,6 +453,14 @@ int ha_mysqloluene::delete_row(const uchar *buf)
 				  goto built; // delete by primary key only (by the first field)
 				  // TODO: determine primary key from  Tarantool or table description
 				  break;
+			  }
+			  case MYSQL_TYPE_DATE:
+			  case MYSQL_TYPE_DATETIME:
+			  case MYSQL_TYPE_TIMESTAMP: {
+				  struct timeval tv = {0};
+				  int w = 0;
+				  (*field)->get_timestamp(&tv, &w); // this function always returns zero
+				  builder.push(static_cast<int64_t>(tv.tv_sec));
 			  }
 		  }
   }
@@ -573,7 +598,7 @@ int ha_mysqloluene::index_first(uchar *buf)
   int rc;
   DBUG_ENTER("ha_mysqloluene::index_first");
   MYSQL_INDEX_READ_ROW_START(table_share->db.str, table_share->table_name.str);
-  rc= HA_ERR_WRONG_COMMAND;
+  rc = HA_ERR_WRONG_COMMAND;
   MYSQL_INDEX_READ_ROW_DONE(rc);
   DBUG_RETURN(rc);
 }
@@ -698,7 +723,18 @@ int ha_mysqloluene::rnd_next(uchar *buf)
 			  */
 			  if (r->isInt(i)) {
 			      (*field)->set_notnull();
-				  (*field)->store(r->getInt(i), false);
+
+				  switch ((*field)->type()) {
+				  case MYSQL_TYPE_TIMESTAMP:
+				  case MYSQL_TYPE_DATE:
+				  case MYSQL_TYPE_DATETIME: {
+					  struct timeval tm = {r->getInt(i), 0};
+					  (*field)->store_timestamp(&tm);
+					  break;
+				  }
+				  default:
+					  (*field)->store(r->getInt(i), false);
+				  }
 			  } else if (r->isString(i)) {
 				  auto string = r->getString(i);
 				  (*field)->set_notnull();

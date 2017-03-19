@@ -43,6 +43,8 @@ TntConnection::~TntConnection()
 
 void TntConnection::connect(const std::string &host_port)
 {
+	last_error.clear();
+
 	shutdownConnection(); // TODO: don't do this if we are/still connected
 
 	tnt = tnt_net(NULL);
@@ -72,6 +74,8 @@ bool TntConnection::connected()
 
 std::shared_ptr<tnt::Iterator> TntConnection::select(const std::string &space, const tnt::TupleBuilder &builder)
 {
+	last_error.clear();
+
 	int32_t sno = resolveSpace(space);
 	if (sno == -1) {
 		// TODO: set last error
@@ -95,6 +99,8 @@ std::shared_ptr<tnt::Iterator> TntConnection::select(const std::string &space, c
 
 bool TntConnection::insert(const std::string &space, const tnt::TupleBuilder &builder)
 {
+	last_error.clear();
+
 	int32_t sno = resolveSpace(space);
 	if (sno == -1) {
 		// TODO: set last error
@@ -103,8 +109,16 @@ bool TntConnection::insert(const std::string &space, const tnt::TupleBuilder &bu
 
 	struct tnt_stream *val = tnt_object_as(NULL, const_cast<char*>(builder.ptr()), builder.size());
 	auto result = tnt_insert(tnt, sno, val);
-	tnt_flush(tnt); // TODO: error check
+	if (result == -1) {
+		tnt_stream_free(val);
+		last_error = tnt_strerror(tnt);
+		return false;
+	}
 	tnt_stream_free(val);
+	if (tnt_flush(tnt) == -1) {
+		last_error = tnt_strerror(tnt);
+		return false;
+	}
 
 	struct tnt_reply reply;
 	tnt_reply_init(&reply);
@@ -118,6 +132,8 @@ bool TntConnection::insert(const std::string &space, const tnt::TupleBuilder &bu
 
 bool TntConnection::del(const std::string &space, const tnt::TupleBuilder &builder)
 {
+	last_error.clear();
+
 	int32_t sno = resolveSpace(space);
 	if (sno == -1) {
 		// TODO: set last error
@@ -141,6 +157,8 @@ bool TntConnection::del(const std::string &space, const tnt::TupleBuilder &build
 
 bool TntConnection::replace(const std::string &space, const tnt::TupleBuilder &builder)
 {
+	last_error.clear();
+
 	int32_t sno = resolveSpace(space);
 	if (sno == -1) {
 		// TODO: set last error

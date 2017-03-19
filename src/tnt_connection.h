@@ -24,8 +24,11 @@ public:
 	bool replace(const std::string &space, const tnt::TupleBuilder &builder);
 
 	int resolveSpace(const std::string &space);
+
+	const std::string &lastError() const;
 private:
 	struct tnt_stream * tnt;
+	std::string last_error;
 	std::string host;
 	int port;
 
