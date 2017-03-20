@@ -138,6 +138,8 @@ public:
    */
   uint max_supported_key_length()    const { return 3500; /* same as innodb. TODO: find out Tarantool's limit */ }
 
+  uint max_supported_key_part_length() const { return 3500; } // otherwise max_supported_key_length does not take effect
+
   /** @brief
     Called in test_quick_select to determine if indexes should be used.
   */

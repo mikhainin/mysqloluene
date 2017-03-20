@@ -263,10 +263,12 @@ int ha_mysqloluene::write_row(uchar *buf)
 {
   DBUG_ENTER("ha_mysqloluene::write_row");
 
-  c.connect(connection_info.host_port_uri);
   if (!c.connected()) {
-	  DBUG_PRINT("ha_mysqloluene::write_row", ("Not connected, no tarantool connection"));
-	  DBUG_RETURN(HA_ERR_NO_CONNECTION);
+	  c.connect(connection_info.host_port_uri);
+	  if (!c.connected()) {
+		  DBUG_PRINT("ha_mysqloluene::write_row", ("Not connected, no tarantool connection"));
+		  DBUG_RETURN(HA_ERR_NO_CONNECTION);
+	  }
   }
 
   my_bitmap_map *org_bitmap = dbug_tmp_use_all_columns(table, table->read_set);
@@ -346,10 +348,12 @@ int ha_mysqloluene::update_row(const uchar *old_data, uchar *new_data)
 
   DBUG_ENTER("ha_mysqloluene::update_row");
 
-  c.connect(connection_info.host_port_uri);
   if (!c.connected()) {
-	  DBUG_PRINT("ha_mysqloluene::write_row", ("Not connected, no tarantool connection"));
-	  DBUG_RETURN(HA_ERR_NO_CONNECTION);
+	  c.connect(connection_info.host_port_uri);
+	  if (!c.connected()) {
+		  DBUG_PRINT("ha_mysqloluene::write_row", ("Not connected, no tarantool connection"));
+		  DBUG_RETURN(HA_ERR_NO_CONNECTION);
+	  }
   }
 
   my_bitmap_map *org_bitmap = dbug_tmp_use_all_columns(table, table->read_set);
@@ -424,10 +428,12 @@ int ha_mysqloluene::delete_row(const uchar *buf)
 {
   DBUG_ENTER("ha_mysqloluene::delete_row");
 
-  c.connect(connection_info.host_port_uri);
   if (!c.connected()) {
-	  DBUG_PRINT("ha_mysqloluene::delete_row", ("Not connected, no tarantool connection"));
-	  DBUG_RETURN(HA_ERR_NO_CONNECTION);
+	  c.connect(connection_info.host_port_uri);
+	  if (!c.connected()) {
+		  DBUG_PRINT("ha_mysqloluene::delete_row", ("Not connected, no tarantool connection"));
+		  DBUG_RETURN(HA_ERR_NO_CONNECTION);
+	  }
   }
 
   my_bitmap_map *org_bitmap = dbug_tmp_use_all_columns(table, table->read_set);
@@ -495,10 +501,34 @@ int ha_mysqloluene::index_read_map(uchar *buf, const uchar *key,
 
   if (find_flag == HA_READ_KEY_EXACT && keypart_map == 1) { // where id = <value>
 	  // TODO: check for key type
-	  int64_t value = *reinterpret_cast<const int*>(key);
 	  c.connect(connection_info.host_port_uri);
 	  tnt::TupleBuilder builder(1);
-	  builder.push(value);
+
+	  	  switch (table->key_info[active_index].key_part[0].field->type()) {
+			  case MYSQL_TYPE_LONG: {
+				  int64_t value = *reinterpret_cast<const int*>(key);
+				  builder.push(value);
+				  break;
+			  }
+			  case MYSQL_TYPE_STRING:
+			  case MYSQL_TYPE_VAR_STRING:
+			  case MYSQL_TYPE_VARCHAR: {
+			  // case MYSQL_TYPE_CHAR:
+				  // auto string = r->getString(i);
+			      // (*field)->set_notnull();
+				  // uint key_len = calculate_key_len(table, active_index, keypart_map);
+				  Field *field = table->key_info[active_index].key_part[0].field;
+			      String varchar;
+			      uint var_length= uint2korr(key);
+			      varchar.set_quick((char*) key+HA_KEY_BLOB_LENGTH,
+				                      var_length, &my_charset_bin);
+			      builder.push(varchar.c_ptr(), varchar.length());
+
+				  break;
+			  }
+			  default:
+				  DBUG_RETURN(HA_ERR_WRONG_COMMAND);
+	  	  }
 	  iterator = c.select(connection_info.space_name, builder);
 	  table->status = 0;
 
@@ -641,7 +671,9 @@ int ha_mysqloluene::index_last(uchar *buf)
 int ha_mysqloluene::rnd_init(bool scan)
 {
   DBUG_ENTER("ha_mysqloluene::rnd_init");
-  c.connect(connection_info.host_port_uri);
+  if (!c.connected()) {
+	  c.connect(connection_info.host_port_uri);
+  }
   if (!c.connected()) {
 	  DBUG_PRINT("ha_mysqloluene::rnd_init", ("Not connected, no tarantool connection"));
 	  DBUG_RETURN(HA_ERR_NO_CONNECTION);
@@ -661,6 +693,7 @@ int ha_mysqloluene::rnd_end()
 {
   DBUG_ENTER("ha_mysqloluene::rnd_end");
   current_row = 0;
+  iterator.reset();
   DBUG_RETURN(0);
 }
 
@@ -876,6 +909,8 @@ int ha_mysqloluene::info(uint flag)
 int ha_mysqloluene::extra(enum ha_extra_function operation)
 {
   DBUG_ENTER("ha_mysqloluene::extra");
+  DBUG_PRINT("enter ha_mysqloluene::extra",("function: %d",(int) operation));
+
   DBUG_RETURN(0);
 }
 
