@@ -1,4 +1,4 @@
-#include "tnt_connection.h"
+#include "connection.h"
 
 #include <stdint.h>
 #include <iostream>
@@ -11,11 +11,13 @@
 
 #include <msgpuck.h>
 
-#include "tnt/iterator.h"
-#include "tnt/tuple_builder.h"
-#include "tnt/row.h"
+#include "iterator.h"
+#include "tuple_builder.h"
+#include "row.h"
 
-TntConnection::TntConnection():
+namespace tnt {
+
+Connection::Connection():
 	tnt(nullptr),
 	port(0)
 {
@@ -34,14 +36,14 @@ TntConnection::TntConnection():
  */
 }
 
-TntConnection::~TntConnection()
+Connection::~Connection()
 {
 	shutdownConnection();
 }
 
 
 
-void TntConnection::connect(const std::string &host_port)
+void Connection::connect(const std::string &host_port)
 {
 	last_error.clear();
 
@@ -58,7 +60,7 @@ void TntConnection::connect(const std::string &host_port)
     }
 }
 
-void TntConnection::shutdownConnection()
+void Connection::shutdownConnection()
 {
 	if (tnt) {
 		tnt_close(tnt);
@@ -67,12 +69,12 @@ void TntConnection::shutdownConnection()
 	}
 }
 
-bool TntConnection::connected()
+bool Connection::connected()
 {
 	return tnt != nullptr;
 }
 
-std::shared_ptr<tnt::Iterator> TntConnection::select(const std::string &space, const tnt::TupleBuilder &builder)
+std::shared_ptr<tnt::Iterator> Connection::select(const std::string &space, const tnt::TupleBuilder &builder)
 {
 	last_error.clear();
 
@@ -97,7 +99,7 @@ std::shared_ptr<tnt::Iterator> TntConnection::select(const std::string &space, c
 	return result;
 }
 
-bool TntConnection::insert(const std::string &space, const tnt::TupleBuilder &builder)
+bool Connection::insert(const std::string &space, const tnt::TupleBuilder &builder)
 {
 	last_error.clear();
 
@@ -130,7 +132,7 @@ bool TntConnection::insert(const std::string &space, const tnt::TupleBuilder &bu
 	return true;
 }
 
-bool TntConnection::del(const std::string &space, const tnt::TupleBuilder &builder)
+bool Connection::del(const std::string &space, const tnt::TupleBuilder &builder)
 {
 	last_error.clear();
 
@@ -155,7 +157,7 @@ bool TntConnection::del(const std::string &space, const tnt::TupleBuilder &build
 	return true;
 }
 
-bool TntConnection::replace(const std::string &space, const tnt::TupleBuilder &builder)
+bool Connection::replace(const std::string &space, const tnt::TupleBuilder &builder)
 {
 	last_error.clear();
 
@@ -180,9 +182,11 @@ bool TntConnection::replace(const std::string &space, const tnt::TupleBuilder &b
 	return true;
 }
 
-int TntConnection::resolveSpace(const std::string &space)
+int Connection::resolveSpace(const std::string &space)
 {
 	tnt_reload_schema(tnt); // TODO: error check if connected, if not loaded yet
 	int32_t sno = tnt_get_spaceno(tnt, space.c_str(), space.size());
 	return sno;
+}
+
 }

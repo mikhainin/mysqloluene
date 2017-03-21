@@ -514,15 +514,17 @@ int ha_mysqloluene::index_read_map(uchar *buf, const uchar *key,
 			  case MYSQL_TYPE_VAR_STRING:
 			  case MYSQL_TYPE_VARCHAR: {
 			  // case MYSQL_TYPE_CHAR:
-				  // auto string = r->getString(i);
-			      // (*field)->set_notnull();
-				  // uint key_len = calculate_key_len(table, active_index, keypart_map);
-				  Field *field = table->key_info[active_index].key_part[0].field;
-			      String varchar;
+
 			      uint var_length= uint2korr(key);
-			      varchar.set_quick((char*) key+HA_KEY_BLOB_LENGTH,
+			      /*
+			       * String varchar;
+			       * varchar.set_quick((char*) key+HA_KEY_BLOB_LENGTH,
 				                      var_length, &my_charset_bin);
-			      builder.push(varchar.c_ptr(), varchar.length());
+				  */
+			      builder.push(
+			    		  reinterpret_cast<const char*>(key+HA_KEY_BLOB_LENGTH),
+						  var_length
+					  );
 
 				  break;
 			  }
@@ -735,25 +737,9 @@ int ha_mysqloluene::rnd_next(uchar *buf)
   } else {
 	  int i = 0;
 	  for (Field **field=table->field ; *field ; field++) {
-		  // buffer.length(0);
+
 		  if (i < r->getFieldNum()) {
-			  /*
-			  switch ((*field)->type()) {
-				  case MYSQL_TYPE_LONG:
-				      (*field)->set_notnull();
-					  (*field)->store(r->getInt(i), false);
-					  break;
-				  case MYSQL_TYPE_STRING:
-				  case MYSQL_TYPE_VAR_STRING:
-				  case MYSQL_TYPE_VARCHAR: {
-				  // case MYSQL_TYPE_CHAR:
-					  auto string = r->getString(i);
-				      (*field)->set_notnull();
-					  (*field)->store(string.c_str(), string.size(), system_charset_info);
-					  break;
-				  }
-			  }
-			  */
+
 			  if (r->isInt(i)) {
 			      (*field)->set_notnull();
 
@@ -761,7 +747,7 @@ int ha_mysqloluene::rnd_next(uchar *buf)
 				  case MYSQL_TYPE_TIMESTAMP:
 				  case MYSQL_TYPE_DATE:
 				  case MYSQL_TYPE_DATETIME: {
-					  struct timeval tm = {r->getInt(i), 0};
+					  struct timeval tm = { r->getInt(i), 0 };
 					  (*field)->store_timestamp(&tm);
 					  break;
 				  }

@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#include "tnt_connection.h"
+#include "tnt/connection.h"
 
 namespace tnt {
 class Iterator;
@@ -42,7 +42,7 @@ class ha_mysqloluene: public handler
   Mysqloluene_share *share;    ///< Shared lock info
   Mysqloluene_share *get_share(); ///< Get the share
   int current_row = 0;
-  TntConnection c;
+  tnt::Connection c;
   std::shared_ptr<tnt::Iterator> iterator;
   connection_info_t connection_info;
 public:

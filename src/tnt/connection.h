@@ -8,12 +8,11 @@ class Row;
 namespace tnt {
 	class Iterator;
 	class TupleBuilder;
-}
 
-class TntConnection {
+class Connection {
 public:
-	TntConnection();
-	~TntConnection();
+	Connection();
+	~Connection();
 
 	void connect(const std::string &host_port);
 	bool connected();
@@ -35,3 +34,4 @@ private:
 	void shutdownConnection();
 };
 
+}

@@ -62,7 +62,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -g -Wl,-bundle_loader,/Users/
 SET(MYSQLOLUENE_PLUGIN_DYNAMIC "ha_mysqloluene")
 SET(MYSQLOLUENE_SOURCES 
 	src/ha_mysqloluene.cc 
-	src/tnt_connection.cc
+	src/tnt/connection.cc
 	src/tnt/row.cc
 	src/tnt/iterator.cc
 	src/tnt/tuple_builder.cc
