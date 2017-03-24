@@ -1,5 +1,6 @@
 v0.01
 - connect via unix socket
+- generate & check request id
 
 v0.02
 - untie from local paths

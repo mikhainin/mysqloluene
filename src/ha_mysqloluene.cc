@@ -516,11 +516,7 @@ int ha_mysqloluene::index_read_map(uchar *buf, const uchar *key,
 			  // case MYSQL_TYPE_CHAR:
 
 			      uint var_length= uint2korr(key);
-			      /*
-			       * String varchar;
-			       * varchar.set_quick((char*) key+HA_KEY_BLOB_LENGTH,
-				                      var_length, &my_charset_bin);
-				  */
+
 			      builder.push(
 			    		  reinterpret_cast<const char*>(key+HA_KEY_BLOB_LENGTH),
 						  var_length

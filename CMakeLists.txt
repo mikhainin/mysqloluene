@@ -56,7 +56,7 @@ ADD_DEFINITIONS( -DENABLED_DEBUG_SYNC -DSAFE_MUTEX) # TODO: do it depending on m
 set(CMAKE_SHARED_MODULE_LOADER_C_FLAG "-Wl,-bundle_loader,")
 set(CMAKE_SHARED_MODULE_LOADER_CXX_FLAG "-Wl,-bundle_loader,")
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -g -Wl,-bundle_loader,/Users/mikhailgalanin/src/mysql-5.7.16/sql/mysqld")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -g -Wl,-bundle_loader,/Users/mikhailgalanin/src/mysql-5.7.16/sql/mysqld")
 # set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-bundle_loader,/Users/mikhailgalanin/src/mysql-5.7.16/sql/mysqld")
 
 SET(MYSQLOLUENE_PLUGIN_DYNAMIC "ha_mysqloluene")
